@@ -1,0 +1,12 @@
+__pycache__/
+*.pyc
+venv*/
+wheels/
+data/
+results/
+figures/
+external_UniMTS/
+*.npz
+*.dot
+*.docx
+*.pdf

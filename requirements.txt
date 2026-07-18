@@ -1,0 +1,11 @@
+# Pinned to the versions used for the reported results (reproduced in a clean venv).
+numpy==2.3.5
+scipy==1.16.3
+scikit-learn==1.7.2
+xgboost==3.3.0
+pandas==3.0.3
+matplotlib
+# Foundation-model (UniMTS) fine-tuning only:
+# torch==2.13.0+cu126  (install from https://download.pytorch.org/whl/cu126)
+# torchvision (cu126), huggingface_hub, ftfy==6.3.1, regex, and CLIP
+#   (pip install git+https://github.com/openai/CLIP.git)
