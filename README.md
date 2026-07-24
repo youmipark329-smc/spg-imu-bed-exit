@@ -139,11 +139,3 @@ bootstrap CI) are in `src/evaluate.py`. Released-UniMTS-checkpoint channel audit
 ## Citation
 
 Please cite the *Sensors* article (details to be added upon publication).
-
-## Not part of the current paper
-
-`src/mhealth_ecg_bridge.py` computes ECG signal-quality indices on the MHEALTH
-dataset. That analysis was removed from the manuscript in July 2026 so the paper
-covers inertial activity recognition only; the script is kept because the
-follow-up ward study reuses it. It is not needed to reproduce any result
-reported in the paper, and the notebook marks its step accordingly.
