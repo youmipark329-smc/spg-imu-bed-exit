@@ -76,12 +76,24 @@ def main() -> None:
     keep = d["yward10"] >= 0
     X, yw, subj, segid = d["X"][keep], d["yward10"][keep], d["subj"][keep], d["segid"][keep]
 
+    # The UniMTS embeddings are optional. Without them this script still produces
+    # the two hand-crafted arms, which is everything Section 3.4 and Figure 5
+    # report; only Section 3.5 / Table 2 / Figure 6 need the foundation-model arms.
     emb_path = RES / f"unimts_emb_w{a.win}.npz"
-    e = np.load(emb_path)
-    E = e["E"]
-    assert np.array_equal(e["yward10"], yw) and np.array_equal(e["subj"], subj), \
-        "embedding rows are not aligned with the window arrays"
-    print(f"windows {X.shape} | UniMTS emb {E.shape} | subjects {len(np.unique(subj))}")
+    have_fm = emb_path.exists()
+    if have_fm:
+        e = np.load(emb_path)
+        E = e["E"]
+        assert np.array_equal(e["yward10"], yw) and np.array_equal(e["subj"], subj), \
+            "embedding rows are not aligned with the window arrays"
+        print(f"windows {X.shape} | UniMTS emb {E.shape} | "
+              f"subjects {len(np.unique(subj))}")
+    else:
+        E = None
+        print(f"windows {X.shape} | subjects {len(np.unique(subj))}")
+        print(f"note: {emb_path.name} not found -> hand-crafted arms only.\n"
+              "      This still yields Section 3.4 and Figure 5. For Section 3.5,\n"
+              "      Table 2 and Figure 6, run unimts_embed.py first.")
 
     F_hand6 = extract(X, use_gyro=True)
     F_hand3 = extract(X, use_gyro=False)
@@ -95,11 +107,16 @@ def main() -> None:
     arms = {
         "hand6+xgb": ("xgb", F_hand6),
         "hand3+xgb": ("xgb", F_hand3),
-        "unimts3+xgb": ("xgb", E),
-        "unimts3+logreg": ("logreg", E),
     }
+    if have_fm:
+        arms["unimts3+xgb"] = ("xgb", E)
+        arms["unimts3+logreg"] = ("logreg", E)
     REF = "hand3+xgb"        # same input as UniMTS -> isolates pretraining
-    CHALLENGERS = ["unimts3+xgb", "unimts3+logreg", "hand6+xgb"]
+    CHALLENGERS = [c for c in ("unimts3+xgb", "unimts3+logreg", "hand6+xgb")
+                   if c in arms]
+
+    # A hand-only run must not overwrite the four-arm artefacts behind Table 2.
+    tag = "" if have_fm else "_handonly"
 
     skf = StratifiedGroupKFold(n_splits=N_FOLDS, shuffle=True, random_state=0)
     folds = list(skf.split(F_hand6, yw, subj))
@@ -135,21 +152,22 @@ def main() -> None:
         res_full[f"{ch}_vs_{REF}_bedexit"] = paired_report(
             subj_scores[ch][1], subj_scores[REF][1], ch, REF)
 
-    print("\n  can the accel-only FM close the gap to 6-axis hand-crafted?")
-    for ch in ("unimts3+xgb", "unimts3+logreg"):
-        print(f"  -- {ch} vs hand6+xgb (macro-F1)")
-        res_full[f"{ch}_vs_hand6_macro"] = paired_report(
-            subj_scores[ch][0], subj_scores["hand6+xgb"][0], ch, "hand6+xgb")
-        print(f"  -- {ch} vs hand6+xgb (bed-exit)")
-        res_full[f"{ch}_vs_hand6_bedexit"] = paired_report(
-            subj_scores[ch][1], subj_scores["hand6+xgb"][1], ch, "hand6+xgb")
+    if have_fm:
+        print("\n  can the accel-only FM close the gap to 6-axis hand-crafted?")
+        for ch in ("unimts3+xgb", "unimts3+logreg"):
+            print(f"  -- {ch} vs hand6+xgb (macro-F1)")
+            res_full[f"{ch}_vs_hand6_macro"] = paired_report(
+                subj_scores[ch][0], subj_scores["hand6+xgb"][0], ch, "hand6+xgb")
+            print(f"  -- {ch} vs hand6+xgb (bed-exit)")
+            res_full[f"{ch}_vs_hand6_bedexit"] = paired_report(
+                subj_scores[ch][1], subj_scores["hand6+xgb"][1], ch, "hand6+xgb")
 
     tab = pd.DataFrame({k: v["per_class"] for k, v in res_full.items()
                         if "per_class" in v})
     print("\n  pooled per-class F1:")
     print(tab.to_string())
-    tab.to_csv(RES / f"fm_per_class_w{a.win}.csv")
-    (RES / f"fm_compare_w{a.win}.json").write_text(json.dumps(res_full, indent=2))
+    tab.to_csv(RES / f"fm_per_class{tag}_w{a.win}.csv")
+    (RES / f"fm_compare{tag}_w{a.win}.json").write_text(json.dumps(res_full, indent=2))
 
     if a.quick:
         print("\n[quick] skipping label-efficiency curves")
@@ -195,8 +213,9 @@ def main() -> None:
     print(piv.to_string())
     df.to_csv(RES / f"fm_label_efficiency_raw_w{a.win}.csv", index=False)
     piv.reset_index().to_csv(RES / f"fm_label_efficiency_w{a.win}.csv", index=False)
-    (RES / f"fm_compare_w{a.win}.json").write_text(json.dumps(res_full, indent=2))
-    print(f"\nsaved -> {RES / f'fm_compare_w{a.win}.json'}")
+    (RES / f"fm_compare{tag}_w{a.win}.json").write_text(json.dumps(res_full, indent=2))
+    print(f"\nsaved -> {RES / f'fm_compare{tag}_w{a.win}.json'}")
+    print(f"label-efficiency arms in this run: {', '.join(arms)}")
 
 
 if __name__ == "__main__":

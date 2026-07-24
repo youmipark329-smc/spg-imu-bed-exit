@@ -1,0 +1,35 @@
+cff-version: 1.2.0
+message: "If you use this code, please cite both the software and the article below."
+title: "Ward-relevant IMU transition recognition — analysis code"
+abstract: >-
+  Analysis code and reproduction notebook for a public-data feasibility
+  benchmark of gyroscope-dependent recognition of ward bed-exit transitions
+  from a waist-worn six-axis inertial measurement unit.
+type: software
+license: MIT
+authors:
+  - family-names: Park
+    given-names: Youmi
+  # NOTE: additional authors to be added once the full author list is confirmed.
+  - family-names: Cha
+    given-names: Wonchul
+repository-code: "https://github.com/ORG/REPO"   # TODO: replace with the real URL after creating the repository
+keywords:
+  - human activity recognition
+  - inertial measurement unit
+  - bed-exit
+  - fall prevention
+  - gyroscope
+preferred-citation:
+  type: article
+  title: >-
+    Sensor choice over model scale: gyroscope-dependent recognition of ward
+    bed-exit transitions from a wearable inertial measurement unit
+  authors:
+    - family-names: Park
+      given-names: Youmi
+    - family-names: Cha
+      given-names: Wonchul
+  journal: "Sensors"
+  year: 2026
+  # TODO: add volume, issue, article number, and DOI on acceptance.

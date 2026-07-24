@@ -13,6 +13,7 @@ Validation: StratifiedGroupKFold grouped by subject. A subject never appears in
 both train and test.
 """
 
+import argparse
 import json
 from pathlib import Path
 
@@ -23,12 +24,19 @@ from sklearn.model_selection import StratifiedGroupKFold
 from xgboost import XGBClassifier
 
 from features import extract
-from prepare_hapt import HAPT_NAMES, WARD_MAP, WARD_NAMES
+from prepare_hapt import HAPT_NAMES, WARD5_MAP, WARD5_NAMES
 
 ROOT = Path(__file__).resolve().parents[1]
 RES = ROOT / "results"
 SEED = 0
 N_FOLDS = 5
+WIN = 128          # 2.56 s at 50 Hz, matching the rest of the pipeline
+
+# CPU "hist" is bit-reproducible; the CUDA builder is not (it varies in the
+# third decimal across runs and drivers). Every other hand-crafted result in the
+# paper is CPU, so the twelve-class baseline is too. --device cuda is kept for
+# speed but does not reproduce the reported values exactly.
+DEVICE = "cpu"
 
 WARD_RELEVANT_12 = [1, 4, 5, 6, 7, 8, 9, 10, 11, 12]   # everything except stairs
 STAIRS_12 = [2, 3]
@@ -38,7 +46,7 @@ def model() -> XGBClassifier:
     return XGBClassifier(
         n_estimators=400, max_depth=6, learning_rate=0.08,
         subsample=0.8, colsample_bytree=0.8,
-        tree_method="hist", device="cuda",
+        tree_method="hist", device=DEVICE,
         random_state=SEED, n_jobs=-1,
     )
 
@@ -66,8 +74,8 @@ def cv_predict(F, y, groups, name):
 
 
 def main() -> None:
-    d = np.load(RES / "hapt_windows.npz")
-    X, y12, yward, subj = d["X"], d["y12"], d["yward"], d["subj"]
+    d = np.load(RES / f"hapt_windows_w{WIN}.npz")
+    X, y12, yward, subj = d["X"], d["y12"], d["yward5"], d["subj"]
 
     print("extracting features ...")
     F = extract(X)
@@ -90,7 +98,7 @@ def main() -> None:
             "n": int((y12 == c).sum()),
             "f1": round(float(per_class[i]), 4),
             "group": "STAIRS (absent in ward)" if c in STAIRS_12
-                     else WARD_NAMES[WARD_MAP[c]],
+                     else WARD5_NAMES[WARD5_MAP[c]],
         })
     tabA = pd.DataFrame(rows).sort_values("f1", ascending=False)
     print("\n  per-class F1 (same model, no class-count confound):")
@@ -121,7 +129,7 @@ def main() -> None:
     print(f"  macro-F1 : {folds_b.mean():.4f} +/- {folds_b.std():.4f}")
 
     tabB = pd.DataFrame({
-        "class": [WARD_NAMES[c] for c in classes_b],
+        "class": [WARD5_NAMES[c] for c in classes_b],
         "n": [int((yward[keep] == c).sum()) for c in classes_b],
         "f1": [round(float(v), 4) for v in per_class_b],
     })
@@ -130,8 +138,8 @@ def main() -> None:
 
     cm = confusion_matrix(yi_b, oof_b)
     cm_df = pd.DataFrame(cm,
-                         index=[WARD_NAMES[c] for c in classes_b],
-                         columns=[WARD_NAMES[c] for c in classes_b])
+                         index=[WARD5_NAMES[c] for c in classes_b],
+                         columns=[WARD5_NAMES[c] for c in classes_b])
     print("\n  confusion matrix (rows = true, cols = predicted):")
     print(cm_df.to_string())
 
@@ -142,7 +150,7 @@ def main() -> None:
         "fold_macro_f1": folds_b.tolist(),
         "per_class": tabB.to_dict("records"),
         "confusion_matrix": cm.tolist(),
-        "confusion_labels": [WARD_NAMES[c] for c in classes_b],
+        "confusion_labels": [WARD5_NAMES[c] for c in classes_b],
     }
 
     (RES / "e1_results.json").write_text(json.dumps(out, indent=2))
@@ -153,4 +161,14 @@ def main() -> None:
 
 
 if __name__ == "__main__":
+    ap = argparse.ArgumentParser(description=__doc__)
+    ap.add_argument("--device", default="cpu", choices=["cpu", "cuda"],
+                    help="XGBoost tree builder. cpu (default) reproduces the "
+                         "reported values exactly; cuda is faster but is not "
+                         "bit-reproducible.")
+    args = ap.parse_args()
+    DEVICE = args.device
+    if DEVICE != "cpu":
+        print("note: --device cuda is not bit-reproducible and will not match "
+              "the reported twelve-class values exactly.\n")
     main()
