@@ -24,7 +24,8 @@ preferred-citation:
   type: article
   title: >-
     Sensor choice over model scale: gyroscope-dependent recognition of ward
-    bed-exit transitions from a wearable inertial measurement unit
+    bed-exit transitions from a wearable inertial measurement unit (IMU)—a
+    public-data feasibility study
   authors:
     - family-names: Park
       given-names: Youmi
