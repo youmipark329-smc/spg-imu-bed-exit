@@ -1,8 +1,8 @@
 # Ward-relevant IMU transition recognition — analysis code
 
-Code to reproduce *"Sensor choice over model scale: gyroscope-dependent
-recognition of ward bed-exit transitions from a wearable inertial measurement
-unit (IMU)"*
+Code to reproduce *"Sensor modality versus pretraining for recognising
+bed-exit–relevant postural transitions: a gyroscope-focused feasibility study on
+public wearable-IMU data"*
 (submitted to *Sensors*).
 
 The study is a public-data feasibility benchmark: it defines a ward-relevant
@@ -53,12 +53,12 @@ foundation-model embeddings bit-identical, fine-tuning macro-F1 within 0.002).
 
 ## Reproduction notebook
 
-`IMU_reproduce_v2.ipynb` reproduces the **v2 paper (IMU only, no ECG)** end to end:
+`IMU_reproduce_final.ipynb` reproduces the **final paper** end to end:
 steps ①–⑥ run on CPU in a few minutes and produce §3.1–§3.4 with Figures 1–7 and
 Table 2; the optional foundation-model steps ⑦–⑨ (torch + GPU) complete §3.5,
 Tables 1 and 3, and Figure 8. Open it at the repository root and run the environment
 and helper cells first. (`IMU_reproduce.ipynb` is the older combined notebook and is
-superseded by the v2 version for the current paper.)
+superseded by the final version for the current paper.)
 
 ## Pipeline
 
@@ -76,7 +76,11 @@ superseded by the v2 version for the current paper.)
 | Representation comparison | `src/run_fm_compare.py --win 128` | §3.5, Table 3, Figure 8 | `fm_compare_w128.json` |
 | Full fine-tuning | `src/run_finetune.py --mode full --epochs 20 --padding 64` | §3.5 | fine-tune JSON |
 | Per-subject paired plot + window-sweep figure/table | `src/make_results_extras.py` | Figures 5–6, Table 2 | `fig_gyro_paired.png`, `fig_window_sweep.png`, `table_window_sweep.csv`, `gyro_paired_subjects.csv` |
-| Figures / tables | `src/make_figures.py`, `src/make_extra_figures.py` | Figures 1–4, 7–8, S1, Tables 1, 3 | `figures/`, table CSVs |
+| Figures / tables | `src/make_figures.py`, `src/make_extra_figures.py` | Figures 2–4, 7–8, S1, Tables 1, 3 | `figures/`, table CSVs |
+
+Figure 1 (`figures/fig_pipeline.png`) is a hand-designed overview graphic, not a
+script output; `make_extra_figures.py` therefore no longer regenerates it (the
+former script version is available by calling `pipeline(outname=...)` explicitly).
 
 `run_fm_compare.py` produces two things: the full-label representation comparison
 (§3.5) and the label-efficiency curves (§3.4). The macro-F1 and bed-exit values in

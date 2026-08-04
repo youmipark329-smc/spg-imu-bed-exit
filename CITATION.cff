@@ -10,10 +10,11 @@ license: MIT
 authors:
   - family-names: Park
     given-names: Youmi
-  # NOTE: additional authors to be added once the full author list is confirmed.
+  - family-names: Bold
+    given-names: Bayarbaatar
   - family-names: Cha
     given-names: Wonchul
-repository-code: "https://github.com/ORG/REPO"   # TODO: replace with the real URL after creating the repository
+repository-code: "https://github.com/youmipark329-smc/spg-imu-bed-exit"
 keywords:
   - human activity recognition
   - inertial measurement unit
@@ -23,12 +24,14 @@ keywords:
 preferred-citation:
   type: article
   title: >-
-    Sensor choice over model scale: gyroscope-dependent recognition of ward
-    bed-exit transitions from a wearable inertial measurement unit (IMU)—a
-    public-data feasibility study
+    Sensor modality versus pretraining for recognising bed-exit–relevant
+    postural transitions: a gyroscope-focused feasibility study on public
+    wearable-IMU data
   authors:
     - family-names: Park
       given-names: Youmi
+    - family-names: Bold
+      given-names: Bayarbaatar
     - family-names: Cha
       given-names: Wonchul
   journal: "Sensors"

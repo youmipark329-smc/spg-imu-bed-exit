@@ -173,8 +173,10 @@ def confusion():
 
 
 if __name__ == "__main__":
-    # The compact layout is the one used as Figure 1 in the manuscript; it keeps
-    # the same stages and box heights but tightens the gaps so the figure fits a
-    # manuscript page. pipeline(compact=False) renders the taller variant.
-    pipeline(compact=True)
+    # NOTE: Figure 1 of the manuscript is now a hand-designed overview graphic
+    # (figures/fig_pipeline.png), not the output of pipeline() below. pipeline()
+    # is kept for reference and can be run explicitly, but it is NOT called here
+    # so a routine figure rebuild does not overwrite the designed Figure 1.
+    # To regenerate the script version under a different name:
+    #     pipeline(compact=True, outname="fig_pipeline_auto.png")
     confusion()

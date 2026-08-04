@@ -63,7 +63,8 @@ def _predict(model, X, device, batch):
     return np.concatenate(preds)
 
 
-def train_fold(Xtr, ytr, gtr, Xte, mode, num_class, device, epochs, batch, lr):
+def train_fold(Xtr, ytr, gtr, Xte, mode, num_class, device, epochs, batch, lr,
+               seed=SEED):
     """Fair fine-tuning: inner-validation model selection + class weighting.
 
     - An inner validation split by SUBJECT (never the test subjects) selects the
@@ -72,12 +73,14 @@ def train_fold(Xtr, ytr, gtr, Xte, mode, num_class, device, epochs, batch, lr):
       (that is why the first attempt scored below the frozen probe).
     - Class-weighted cross-entropy so the rare bed-exit transitions are not
       drowned by the abundant static classes.
+    - ``seed`` controls weight-init/batch order and the inner-val subject draw,
+      so repeated runs with different seeds quantify fine-tuning variance.
     """
     from sklearn.metrics import f1_score
-    torch.manual_seed(SEED)
+    torch.manual_seed(seed)
 
     # inner-val: hold out ~20% of the training SUBJECTS
-    rng = np.random.default_rng(SEED)
+    rng = np.random.default_rng(seed)
     subs = np.unique(gtr)
     n_val = max(1, int(round(0.2 * len(subs))))
     val_subs = set(rng.choice(subs, size=n_val, replace=False).tolist())
@@ -130,10 +133,16 @@ def main() -> None:
                     help="run only the first fold to sanity-check the training loop")
     ap.add_argument("--padding", type=int, default=64,
                     help="resampled sequence length; 64 covers a 2.56s window (avoids 4x wrap-tiling)")
+    ap.add_argument("--seed", type=int, default=SEED,
+                    help="seed for the CV split, inner-val draw, and training; "
+                         "vary it across runs to quantify fine-tuning variance")
+    ap.add_argument("--tag", type=str, default="",
+                    help="output filename suffix, e.g. _seed1, so multi-seed runs "
+                         "do not overwrite each other or the canonical file")
     a = ap.parse_args()
 
     device = "cuda" if torch.cuda.is_available() else "cpu"
-    print(f"device: {device} | mode: {a.mode} | epochs {a.epochs}")
+    print(f"device: {device} | mode: {a.mode} | epochs {a.epochs} | seed {a.seed}")
     if device == "cpu":
         print("WARNING: CPU fine-tuning is ~10-32 h; aborting. Install CUDA torch.")
         return
@@ -150,14 +159,14 @@ def main() -> None:
     print(f"preprocessing to UniMTS input (3-channel, padding={a.padding}) ...")
     X = preprocess(Xraw, 50, gyro=0, padding=a.padding).numpy()   # (N, 3, padding, 22, 1)
 
-    skf = StratifiedGroupKFold(n_splits=N_FOLDS, shuffle=True, random_state=SEED)
+    skf = StratifiedGroupKFold(n_splits=N_FOLDS, shuffle=True, random_state=a.seed)
     oof = np.full(len(yi), -1)
     t0 = time.time()
     from sklearn.metrics import f1_score
     for k, (tr, te) in enumerate(skf.split(X, yi, subj)):
         assert not set(subj[tr]) & set(subj[te])
         p = train_fold(X[tr], yi[tr], subj[tr], X[te], a.mode, len(classes), device,
-                       a.epochs, a.batch, a.lr)
+                       a.epochs, a.batch, a.lr, seed=a.seed)
         oof[te] = p
         print(f"  fold {k+1}/{N_FOLDS}  macro-F1 {f1_score(yi[te], p, average='macro'):.4f}"
               f"  ({time.time()-t0:.0f}s elapsed)")
@@ -180,7 +189,7 @@ def main() -> None:
         print(f"  {nm:<14s} {v:.4f}")
 
     out = {
-        "mode": a.mode, "epochs": a.epochs,
+        "mode": a.mode, "epochs": a.epochs, "seed": a.seed,
         "macro_f1_mean": float(macro.mean()), "macro_f1_std": float(macro.std()),
         "bed_exit_f1_mean": float(np.nanmean(be)),
         "per_class": {nm: float(v) for nm, v in zip(names, per)},
@@ -202,8 +211,9 @@ def main() -> None:
     print("\n  fine-tuned UniMTS vs 6-axis hand-crafted (paired, bed-exit F1):")
     out["vs_hand6_bedexit"] = paired_report(be, be6, f"unimts-ft-{a.mode}", "hand6+xgb")
 
-    (RES / f"finetune_{a.mode}_w{a.win}.json").write_text(json.dumps(out, indent=2))
-    print(f"\nsaved -> {RES / f'finetune_{a.mode}_w{a.win}.json'}")
+    out_path = RES / f"finetune_{a.mode}_w{a.win}{a.tag}.json"
+    out_path.write_text(json.dumps(out, indent=2))
+    print(f"\nsaved -> {out_path}")
     print("\nreference (from fm_compare):")
     print("  frozen probe        macro 0.7082  bed-exit 0.4852")
     print("  3-axis hand-crafted macro 0.6467  bed-exit 0.3512")

@@ -146,11 +146,21 @@ def _collect_arms():
                 arms[k] = {"macro": fm[k]["macro_f1_subject_mean"],
                            "bed": fm[k]["bed_exit_f1_subject_mean"],
                            "per_class": fm[k]["per_class"]}
-    j = _load("finetune_full_w128.json")
-    if j:
+    # Prefer the multi-seed aggregate for the fine-tuned arm: it is the only
+    # CUDA-non-reproducible arm, so its reported point is the mean over seeds
+    # (the single-seed bed-exit was on the low end of the seed spread). Fall
+    # back to the single-seed file if the aggregate is absent.
+    ms = _load("finetune_full_w128_multiseed.json")
+    if ms:
         arms["unimts3+ft-full"] = {
-            "macro": j["macro_f1_mean"], "bed": j["bed_exit_f1_mean"],
-            "per_class": j["per_class"]}
+            "macro": ms["macro_f1_seed_mean"], "bed": ms["bed_exit_f1_seed_mean"],
+            "per_class": ms["per_class_seed_mean"]}
+    else:
+        j = _load("finetune_full_w128.json")
+        if j:
+            arms["unimts3+ft-full"] = {
+                "macro": j["macro_f1_mean"], "bed": j["bed_exit_f1_mean"],
+                "per_class": j["per_class"]}
     return arms
 
 
