@@ -28,22 +28,46 @@ def make_model(seed: int = SEED) -> XGBClassifier:
     )
 
 
-def cv_oof(F, y, groups, seed: int = SEED, n_folds: int = N_FOLDS):
+def cv_oof(F, y, groups, seed: int = SEED, n_folds: int = N_FOLDS, model_fn=None):
     """Out-of-fold predictions with subject-grouped CV.
 
     Returns (yi, oof, classes) where yi/oof are contiguous class indices.
+    model_fn(seed) -> unfitted estimator; defaults to the fixed XGBoost used
+    throughout, so passing nothing reproduces the main analysis exactly. Any
+    estimator is fitted inside the fold, so a scaling pipeline stays leakage-free.
     """
     classes = np.unique(y)
     remap = {c: i for i, c in enumerate(classes)}
     yi = np.array([remap[v] for v in y])
+    mk = model_fn or make_model
 
     oof = np.full(len(y), -1)
     skf = StratifiedGroupKFold(n_splits=n_folds, shuffle=True, random_state=seed)
     for tr, te in skf.split(F, yi, groups):
         assert not set(groups[tr]) & set(groups[te]), "subject leaked across folds"
-        oof[te] = make_model(seed).fit(F[tr], yi[tr]).predict(F[te])
+        oof[te] = mk(seed).fit(F[tr], yi[tr]).predict(F[te])
     assert (oof >= 0).all(), "some windows never landed in a test fold"
     return yi, oof, classes
+
+
+def cv_oof_proba(F, y, groups, seed: int = SEED, n_folds: int = N_FOLDS):
+    """Same folds and model as cv_oof, but returns out-of-fold class probabilities.
+
+    An alarm is triggered on a probability, not on argmax, so calibration and the
+    missed-alarm / false-alarm trade-off both need the probabilities rather than
+    the hard labels cv_oof returns. Splits and seed match cv_oof, so argmax of
+    this equals cv_oof's predictions.
+    """
+    classes = np.unique(y)
+    remap = {c: i for i, c in enumerate(classes)}
+    yi = np.array([remap[v] for v in y])
+
+    proba = np.zeros((len(y), len(classes)), dtype=np.float64)
+    skf = StratifiedGroupKFold(n_splits=n_folds, shuffle=True, random_state=seed)
+    for tr, te in skf.split(F, yi, groups):
+        assert not set(groups[tr]) & set(groups[te]), "subject leaked across folds"
+        proba[te] = make_model(seed).fit(F[tr], yi[tr]).predict_proba(F[te])
+    return yi, proba, classes
 
 
 def per_subject_macro_f1(yi, oof, subj) -> tuple[np.ndarray, np.ndarray]:

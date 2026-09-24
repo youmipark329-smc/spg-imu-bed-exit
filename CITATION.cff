@@ -3,17 +3,24 @@ message: "If you use this code, please cite both the software and the article be
 title: "Ward-relevant IMU transition recognition — analysis code"
 abstract: >-
   Analysis code and reproduction notebook for a public-data feasibility
-  benchmark of gyroscope-dependent recognition of ward bed-exit transitions
-  from a waist-worn six-axis inertial measurement unit.
+  benchmark of gyroscope-dependent recognition of bed-exit-relevant postural
+  transitions from a waist-worn six-axis inertial measurement unit, including
+  the sensor ablations, the foundation-model comparison, the label-efficiency
+  analysis, and the alarm-threshold, event-level, and boundary-window scoring.
 type: software
+version: "1.1.0"
+date-released: "2026-09-24"
 license: MIT
 authors:
   - family-names: Park
     given-names: Youmi
+    affiliation: "Samsung Medical Center; Sungkyunkwan University"
   - family-names: Bold
     given-names: Bayarbaatar
+    affiliation: "Sungkyunkwan University"
   - family-names: Cha
     given-names: Wonchul
+    affiliation: "Samsung Medical Center; Sungkyunkwan University"
 repository-code: "https://github.com/youmipark329-smc/spg-imu-bed-exit"
 keywords:
   - human activity recognition
@@ -21,6 +28,7 @@ keywords:
   - bed-exit
   - fall prevention
   - gyroscope
+  - motion foundation model
 preferred-citation:
   type: article
   title: >-
@@ -36,4 +44,5 @@ preferred-citation:
       given-names: Wonchul
   journal: "Sensors"
   year: 2026
-  # TODO: add volume, issue, article number, and DOI on acceptance.
+  status: in-press
+  # Accepted 23 September 2026. Volume, issue, article number, and DOI will be added on publication.

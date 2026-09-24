@@ -37,7 +37,7 @@ def _chan_feats(x: np.ndarray) -> list[np.ndarray]:
     ]
 
 
-def extract(X: np.ndarray, use_gyro: bool = True) -> np.ndarray:
+def extract(X: np.ndarray, use_gyro: bool = True, use_acc: bool = True) -> np.ndarray:
     """X: (n, win, 6) -> (n, n_features). Channel order: acc xyz, gyro xyz.
 
     use_gyro=False drops the gyroscope entirely, leaving a 3-axis
@@ -45,12 +45,20 @@ def extract(X: np.ndarray, use_gyro: bool = True) -> np.ndarray:
     models (RelCon, Inertia-1, LSM) are accelerometer-only, so whether the
     gyroscope carries the sitting/standing signal decides which models are
     usable downstream.
+
+    use_acc=False drops the accelerometer, giving the mirror-image 3-axis
+    gyroscope-only set. Accelerometer-only isolates what a gravity signal can
+    do; gyroscope-only isolates what rotation alone can do, so the pair
+    separates posture information (gravity) from transition information
+    (rotation) instead of only removing one sensor.
     """
     acc, gyr = X[..., :3], X[..., 3:]
-    acc_mag = np.linalg.norm(acc, axis=2)
 
-    chans = [acc[..., i] for i in range(3)] + [acc_mag]
-    sigs = [acc]
+    chans: list[np.ndarray] = []
+    sigs: list[np.ndarray] = []
+    if use_acc:
+        chans += [acc[..., i] for i in range(3)] + [np.linalg.norm(acc, axis=2)]
+        sigs.append(acc)
     if use_gyro:
         chans += [gyr[..., i] for i in range(3)] + [np.linalg.norm(gyr, axis=2)]
         sigs.append(gyr)

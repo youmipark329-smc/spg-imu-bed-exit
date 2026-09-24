@@ -30,7 +30,7 @@ from features import extract
 from prepare_hapt import BED_EXIT, WARD10_NAMES
 
 mpl.rcParams.update({
-    "figure.dpi": 150, "savefig.dpi": 300, "font.size": 10,
+    "figure.dpi": 150, "savefig.dpi": 600, "font.size": 8,
     "axes.spines.top": False, "axes.spines.right": False,
     "axes.grid": True, "grid.alpha": 0.3, "figure.autolayout": True,
 })
@@ -50,7 +50,7 @@ def window_sweep():
         return
     df = pd.read_csv(p).sort_values("win_sec")
 
-    fig, ax = plt.subplots(figsize=(6.4, 4.0))
+    fig, ax = plt.subplots(figsize=(5.6, 3.6))   # Figure S3, placed at 5.6 in
     for col, lab, mk in (("macro_f1", "macro-F1 (10 classes)", "o"),
                          ("f1_transitions", "mean F1, six transitions", "s"),
                          ("f1_bed_exit", "bed-exit F1", "^")):
@@ -96,7 +96,7 @@ def gyro_paired(win: int = 128):
     })
     df.round(4).to_csv(RES / "gyro_paired_subjects.csv", index=False)
 
-    fig, axes = plt.subplots(1, 2, figsize=(7.2, 4.2))
+    fig, axes = plt.subplots(1, 2, figsize=(6.7, 3.9))   # placed at 6.7 in
     panels = (("macro_f1", "macro-F1", axes[0]),
               ("bed_exit_f1", "bed-exit F1", axes[1]))
     for key, title, ax in panels:
@@ -109,12 +109,13 @@ def gyro_paired(win: int = 128):
                 marker="o", ms=6, zorder=5, label="mean")
         worse = int((b[ok] < a[ok]).sum())
         ax.set_xticks([0, 1])
-        ax.set_xticklabels(["six-axis", "three-axis"])
+        ax.set_xticklabels(["six-axis", "accelerometer-only"])
         ax.set_xlim(-0.25, 1.25)
         ax.set_ylim(0, 1.02)
         ax.set_ylabel(title)
-        ax.set_title(f"{title}\n{worse}/{int(ok.sum())} subjects lower without gyroscope",
-                     fontsize=9)
+    for ax, lab in zip(axes, "ab"):
+        ax.text(-0.16, 1.02, f"({lab})", transform=ax.transAxes, fontsize=9,
+                fontweight="bold", ha="left", va="bottom")
     axes[0].legend(fontsize=8, loc="lower left")
     fig.savefig(FIG / "fig_gyro_paired.png", bbox_inches="tight")
     plt.close(fig)

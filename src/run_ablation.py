@@ -40,8 +40,12 @@ def run_one(win: int) -> dict:
     res: dict = {"win": win, "win_sec": win / 50, "n_windows": int(X.shape[0])}
     subj_macro, subj_bedexit, per_class = {}, {}, {}
 
-    for tag, use_gyro in (("acc+gyro", True), ("acc_only", False)):
-        F = extract(X, use_gyro=use_gyro)
+    # gyro_only is the mirror of acc_only: it separates rotation (transitions)
+    # from gravity (posture) instead of only removing the gyroscope.
+    for tag, use_acc, use_gyro in (("acc+gyro", True, True),
+                                   ("acc_only", True, False),
+                                   ("gyro_only", False, True)):
+        F = extract(X, use_gyro=use_gyro, use_acc=use_acc)
         yi, oof, classes = cv_oof(F, yw, subj)
         names = [WARD10_NAMES[c] for c in classes]
 
@@ -68,8 +72,19 @@ def run_one(win: int) -> dict:
     res["bed_exit_f1"] = paired_report(subj_bedexit["acc+gyro"], subj_bedexit["acc_only"],
                                        "acc+gyro", "acc_only")
 
+    print("\n  paired over subjects - macro-F1 (gyro-only vs acc-only):")
+    res["macro_f1_gyro_vs_acc"] = paired_report(
+        subj_macro["gyro_only"], subj_macro["acc_only"], "gyro_only", "acc_only")
+    print("\n  paired over subjects - bed-exit F1 (gyro-only vs acc-only):")
+    res["bed_exit_f1_gyro_vs_acc"] = paired_report(
+        subj_bedexit["gyro_only"], subj_bedexit["acc_only"], "gyro_only", "acc_only")
+    print("\n  paired over subjects - macro-F1 (6-axis vs gyro-only):")
+    res["macro_f1_6ax_vs_gyro"] = paired_report(
+        subj_macro["acc+gyro"], subj_macro["gyro_only"], "acc+gyro", "gyro_only")
+
     tab = pd.DataFrame(per_class)
     tab["delta"] = (tab["acc+gyro"] - tab["acc_only"]).round(4)
+    tab["delta_gyro_vs_acc"] = (tab["gyro_only"] - tab["acc_only"]).round(4)
     print("\n  pooled per-class F1:")
     print(tab.to_string())
     tab.to_csv(RES / f"ablation_gyro_w{win}.csv")
@@ -100,6 +115,9 @@ def main() -> None:
         "p": f"{r['macro_f1']['wilcoxon_p']:.2e}",
         "bedexit_6ax": round(r["bed_exit_f1"]["mean_acc+gyro"], 4),
         "bedexit_3ax": round(r["bed_exit_f1"]["mean_acc_only"], 4),
+        "macro_f1_gyro": round(r["macro_f1_gyro_vs_acc"]["mean_gyro_only"], 4),
+        "bedexit_gyro": round(r["bed_exit_f1_gyro_vs_acc"]["mean_gyro_only"], 4),
+        "gyro_vs_acc_p": f"{r['macro_f1_gyro_vs_acc']['wilcoxon_p']:.2e}",
     } for r in out]
     print(pd.DataFrame(rows).to_string(index=False))
     print(f"\nsaved -> {RES / 'ablation_gyro.json'}")

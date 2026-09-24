@@ -25,7 +25,7 @@ import numpy as np
 import pandas as pd
 
 mpl.rcParams.update({
-    "figure.dpi": 150, "savefig.dpi": 300, "font.size": 10,
+    "figure.dpi": 150, "savefig.dpi": 600, "font.size": 8,
     "axes.spines.top": False, "axes.spines.right": False,
     "axes.grid": True, "grid.alpha": 0.3, "figure.autolayout": True,
 })
@@ -56,27 +56,25 @@ def fig1_headline_decomposition():
     colors = ["#8C8C8C" if "STAIRS" in g else (C_BED if c in BED_EXIT else
               (C_TRANS if "TRANSITION" in g else C_STATIC))
               for c, g in zip(df["class"], df["group"])]
-    # HAPT labels lying as "LAYING"; the manuscript uses "lying" throughout, so
-    # display the corrected spelling and match the title-case style of the other
-    # figures rather than showing the raw dataset tokens.
-    def disp(c):
-        c = "LYING" if c == "LAYING" else c
-        return c.replace("_", "-").title().replace("-To-", "-to-")
-    df = df.assign(label=[disp(c) for c in df["class"]])
-    fig, ax = plt.subplots(figsize=(7, 4.2))
-    ax.barh(df["label"], df["f1"], color=colors)
+    # HAPT spells the class "LAYING"; the manuscript says "lying" throughout, and the
+    # other classes take the same Title-case, hyphenated style as every other figure.
+    labels = [("LYING" if c == "LAYING" else c).replace("_", "-").title().replace("-To-", "-to-")
+              for c in df["class"]]
+    fig, ax = plt.subplots(figsize=(6.0, 4.0))   # placed at 6.0 in: 1:1, 8 pt type
+    ax.barh(labels, df["f1"], color=colors)
     ax.axvline(j["task_A"]["macro_f1_mean"], ls="--", c="k", lw=1,
                label=f"macro-F1 = {j['task_A']['macro_f1_mean']:.3f}")
     ax.set_xlabel("per-class F1 (12-class HAPT model)")
     ax.set_xlim(0, 1.02)
     from matplotlib.patches import Patch
+    # legend below the axes so it cannot overlap the long bars
     ax.legend(handles=[
         Patch(color=C_STATIC, label="static (ward)"),
         Patch(color=C_TRANS, label="transition (ward)"),
         Patch(color=C_BED, label="bed-exit (ward)"),
         Patch(color="#8C8C8C", label="stairs (absent in ward)"),
-    ], loc="lower right", fontsize=8)
-    fig.savefig(FIG / "fig1_headline_decomposition.png"); plt.close(fig)
+    ], loc="upper center", bbox_to_anchor=(0.5, -0.16), ncol=4, fontsize=8, frameon=False)
+    fig.savefig(FIG / "fig1_headline_decomposition.png", bbox_inches="tight"); plt.close(fig)
     print("fig1 done")
 
 
@@ -90,16 +88,16 @@ def fig2_gyro_ablation():
     delta = [pc6[c] - pc3[c] for c in cats]
     colors = [C_BED if c in BED_EXIT else
               (C_TRANS if "_TO_" in c else C_STATIC) for c in cats]
-    fig, ax = plt.subplots(figsize=(7, 4.2))
-    ax.bar(cats, delta, color=colors)
-    ax.set_ylabel("F1 gain from adding gyroscope\n(6-axis minus 3-axis)")
+    fig, ax = plt.subplots(figsize=(6.0, 3.7))   # placed at 6.0 in
+    labels = [CLASS_LABEL[c] for c in cats]  # journal-style names, not code identifiers
+    ax.bar(labels, delta, color=colors)
+    ax.set_ylabel("F1 gain")  # defined in the caption: six-axis minus accelerometer-only
     ax.axhline(0, c="k", lw=0.8)
     ax.tick_params(axis="x", rotation=45)
     for lb in ax.get_xticklabels():
         lb.set_ha("right")
-    ax.set_title(f"macro-F1 +{d['macro_f1']['mean_diff']:.3f} "
-                 f"(p={d['macro_f1']['wilcoxon_p']:.1e}), "
-                 f"bed-exit +{d['bed_exit_f1']['mean_diff']:.3f}", fontsize=9)
+    for i, v in enumerate(delta):
+        ax.text(i, v + 0.006, f"{v:+.3f}", ha="center", va="bottom", fontsize=6.5)
     fig.savefig(FIG / "fig2_gyro_ablation.png"); plt.close(fig)
     print("fig2 done")
 
@@ -113,8 +111,8 @@ def fig3_label_efficiency():
     # and are padding-independent, so the curve is directly comparable. The
     # gap between them at every budget is the gyroscope effect.
     arms = {"hand6+xgb": ("6-axis hand-crafted", C_STATIC, "o", "-"),
-            "hand3+xgb": ("3-axis hand-crafted", "#8C8C8C", "s", "--")}
-    fig, axes = plt.subplots(1, 2, figsize=(10, 4.2))
+            "hand3+xgb": ("3-axis accelerometer-only", "#8C8C8C", "s", "--")}
+    fig, axes = plt.subplots(1, 2, figsize=(6.7, 3.0))   # placed at 6.7 in
     for metric, ax, title in ((("macro_f1"), axes[0], "macro-F1"),
                               (("bed_exit_f1"), axes[1], "bed-exit F1")):
         for arm, (lab, col, mk, ls) in arms.items():
@@ -124,9 +122,15 @@ def fig3_label_efficiency():
         ax.set_xscale("log")
         ax.set_xlabel("labelled observation (minutes)")
         ax.set_ylabel(title)
-        ax.set_title(title)
-    axes[0].legend(fontsize=8, loc="lower right")
-    fig.savefig(FIG / "fig3_label_efficiency.png"); plt.close(fig)
+    for ax, lab in zip(axes, "ab"):
+        ax.text(-0.16, 1.02, f"({lab})", transform=ax.transAxes, fontsize=9,
+                fontweight="bold", ha="left", va="bottom")
+    # one legend for both panels, centred beneath them
+    h, l = axes[0].get_legend_handles_labels()
+    fig.legend(h, l, loc="lower center", ncol=2, fontsize=8, frameon=False,
+               bbox_to_anchor=(0.5, -0.02))
+    fig.tight_layout(rect=(0, 0.08, 1, 1))
+    fig.savefig(FIG / "fig3_label_efficiency.png", bbox_inches="tight"); plt.close(fig)
     print("fig3 done")
 
 
@@ -146,161 +150,97 @@ def _collect_arms():
                 arms[k] = {"macro": fm[k]["macro_f1_subject_mean"],
                            "bed": fm[k]["bed_exit_f1_subject_mean"],
                            "per_class": fm[k]["per_class"]}
-    # Prefer the multi-seed aggregate for the fine-tuned arm: it is the only
-    # CUDA-non-reproducible arm, so its reported point is the mean over seeds
-    # (the single-seed bed-exit was on the low end of the seed spread). Fall
-    # back to the single-seed file if the aggregate is absent.
-    ms = _load("finetune_full_w128_multiseed.json")
-    if ms:
+    j = _load("finetune_full_w128.json")
+    if j:
         arms["unimts3+ft-full"] = {
-            "macro": ms["macro_f1_seed_mean"], "bed": ms["bed_exit_f1_seed_mean"],
-            "per_class": ms["per_class_seed_mean"]}
-    else:
-        j = _load("finetune_full_w128.json")
-        if j:
-            arms["unimts3+ft-full"] = {
-                "macro": j["macro_f1_mean"], "bed": j["bed_exit_f1_mean"],
-                "per_class": j["per_class"]}
-    return arms
+            "macro": j["macro_f1_mean"], "bed": j["bed_exit_f1_mean"],
+            "per_class": j["per_class"]}
+
+    # gyroscope-only mirror of the accelerometer-only arm (reviewer request):
+    # it separates rotation from gravity instead of only removing one sensor
+    ab = _load("ablation_gyro.json")
+    if ab and "gyro_only" in ab[0].get("per_class", {}):
+        d0 = ab[0]  # 2.56 s primary window
+        arms["hand3gyro+xgb"] = {
+            "macro": float(np.mean(d0["subject_macro_f1"]["gyro_only"])),
+            "bed": float(np.nanmean(
+                np.array(d0["subject_bed_exit_f1"]["gyro_only"], dtype=float))),
+            "per_class": d0["per_class"]["gyro_only"]}
+
+    order = ["hand6+xgb", "hand3gyro+xgb", "hand3+xgb",
+             "unimts3+ft-full", "unimts3+logreg", "unimts3+xgb"]
+    return {k: arms[k] for k in order if k in arms}
 
 
-FM_ORDER = ["hand6+xgb", "unimts3+ft-full", "unimts3+logreg",
-            "unimts3+xgb", "hand3+xgb"]
-ARCHIVED_HEADLINE = [RES / "table2_headline.csv",
-                     ROOT.parent / "analysis" / "tables" / "table2_headline.csv"]
-
-
-def _arms_from_archive():
-    """Headline metrics recovered from a previously written table2_headline.csv.
-
-    The foundation-model arms need a GPU run to produce fm_compare_w128.json
-    and finetune_full_w128.json. When those are absent, the two representation
-    figures are redrawn from the archived table this script itself wrote on the
-    GPU run, so the plotted values are the reported ones rather than new
-    numbers. Only macro-F1 and bed-exit F1 survive that round trip, which is
-    all these two figures use; per-class artefacts still require the JSONs.
-    """
-    for p in ARCHIVED_HEADLINE:
-        if p.exists():
-            df = pd.read_csv(p)
-            key = {v: k for k, v in ARM_LABEL.items()}
-            arms = {key[r["Representation"]]: {"macro": r["Macro-F1"],
-                                               "bed": r["Bed-exit F1"]}
-                    for _, r in df.iterrows() if r["Representation"] in key}
-            if arms:
-                print(f"  (representation figures redrawn from {p.name})")
-                return arms
-    return {}
-
-
-FM_SHORT = {"hand6+xgb": "hand-crafted 6-axis",
-            "hand3+xgb": "hand-crafted 3-axis",
-            "unimts3+logreg": "UniMTS frozen probe",
-            "unimts3+ft-full": "UniMTS full fine-tune",
-            "unimts3+xgb": "UniMTS emb + XGBoost"}
-FM_INPUT = {"hand6+xgb": "6-axis"}     # every other arm is accelerometer-only
-
-
-def fig4_representation_dots():
-    """Ranked dot plot of the full-label arms (Figure 8).
-
-    A dot plot rather than paired bars: the paper already carries two bar
-    figures, and the claim here is a ranking against one reference value,
-    which a dot plot states more directly than ten bars.
-    """
-    arms = _collect_arms() or _arms_from_archive()
+def fig4_representation_bars():
+    arms = _collect_arms()
     if not arms:
         print("skip fig4"); return
-    order = [a for a in FM_ORDER if a in arms]
-    ref = arms["hand6+xgb"]["macro"]
-
-    fig, ax = plt.subplots(figsize=(7.4, 3.5))
-    rows = list(reversed(order))                       # best arm at the top
-    for i, a in enumerate(rows):
-        m, b = arms[a]["macro"], arms[a]["bed"]
-        ax.plot([b, m], [i, i], color="#8A8A8A", lw=1.4, zorder=1,
-                solid_capstyle="round")
-        ax.scatter(m, i, s=64, color=C_STATIC, zorder=3,
-                   label="macro-F1" if i == 0 else None)
-        ax.scatter(b, i, s=64, color=C_BED, zorder=3,
-                   label="bed-exit F1" if i == 0 else None)
-        ax.text(m + 0.012, i, f"{m:.2f}", va="center", fontsize=8, color=C_STATIC)
-        ax.text(b - 0.012, i, f"{b:.2f}", va="center", ha="right", fontsize=8,
-                color=C_BED)
-    ax.axvline(ref, ls=":", lw=1.3, color=C_STATIC, zorder=2)
-    ax.set_yticks(range(len(rows)))
-    ax.set_yticklabels([FM_SHORT[a] for a in rows], fontsize=8.5)
-    for lab, a in zip(ax.get_yticklabels(), rows):
-        if FM_INPUT.get(a) == "6-axis":
-            lab.set_fontweight("bold")
-    ax.set_xlim(0.28, 0.90); ax.set_ylim(-0.6, len(rows) - 0.4)
-    ax.set_xlabel("F1")
-    ax.text(ref - 0.008, len(rows) - 0.55, "six-axis hand-crafted reference",
-            ha="right", va="top", fontsize=7.8, color=C_STATIC, style="italic")
-    ax.set_title("Every accelerometer-only representation falls short of the "
-                 "six-axis baseline", fontsize=9.5)
-    ax.legend(fontsize=8, loc="lower right")
-    ax.spines[["top", "right", "left"]].set_visible(False)
-    ax.tick_params(axis="y", length=0)
-    fig.tight_layout()
-    fig.savefig(FIG / "fig4_representation.png", bbox_inches="tight")
-    plt.close(fig)
+    order = [a for a in ["hand6+xgb", "unimts3+ft-full", "unimts3+logreg",
+                         "unimts3+xgb", "hand3+xgb"]
+             if a in arms]
+    labels = {"hand6+xgb": "hand-crafted\n6-axis", "hand3+xgb": "hand-crafted\n3-axis",
+              "unimts3+logreg": "UniMTS\nfrozen probe", "unimts3+ft-full": "UniMTS\nfull FT",
+              "unimts3+xgb": "UniMTS\nemb+XGB"}
+    macro = [arms[a]["macro"] for a in order]
+    bed = [arms[a]["bed"] for a in order]
+    x = np.arange(len(order)); w = 0.38
+    fig, ax = plt.subplots(figsize=(9, 4.4))
+    ax.bar(x - w/2, macro, w, label="macro-F1", color=C_STATIC)
+    ax.bar(x + w/2, bed, w, label="bed-exit F1", color=C_BED)
+    ax.axhline(arms["hand6+xgb"]["macro"], ls=":", c=C_STATIC, lw=1)
+    ax.set_xticks(x); ax.set_xticklabels([labels[a] for a in order], fontsize=8)
+    ax.set_ylabel("F1"); ax.set_ylim(0, 1.02); ax.legend()
+    ax.set_title("6-axis input beats every 3-axis representation, pretrained or not",
+                 fontsize=9)
+    for xi, (m, b) in enumerate(zip(macro, bed)):
+        ax.text(xi - w/2, m + 0.01, f"{m:.2f}", ha="center", fontsize=7)
+        ax.text(xi + w/2, b + 0.01, f"{b:.2f}", ha="center", fontsize=7)
+    fig.savefig(FIG / "fig4_representation.png"); plt.close(fig)
     print("fig4 done")
-
-
-def figS1_representation_scatter():
-    """Supplementary view: the two metrics as coordinates, one point per arm.
-
-    Same numbers as Figure 8, shown jointly so that the two metrics can be
-    seen to move together rather than trading off.
-    """
-    arms = _collect_arms() or _arms_from_archive()
-    if not arms:
-        print("skip figS1"); return
-    bx, by = arms["hand6+xgb"]["macro"], arms["hand6+xgb"]["bed"]
-    off = {"hand6+xgb": (-0.012, 0.016, "right"),
-           "unimts3+ft-full": (0.010, 0.012, "left"),
-           "unimts3+logreg": (0.010, -0.020, "left"),
-           "unimts3+xgb": (0.010, 0.010, "left"),
-           "hand3+xgb": (0.010, 0.010, "left")}
-    fig, ax = plt.subplots(figsize=(6.4, 4.6))
-    ax.axvspan(bx, 1, color="#EAF0F7", zorder=0)
-    ax.axhspan(by, 1, color="#EAF0F7", zorder=0)
-    for a in [x for x in FM_ORDER if x in arms]:
-        six = FM_INPUT.get(a) == "6-axis"
-        m, b = arms[a]["macro"], arms[a]["bed"]
-        ax.scatter(m, b, s=150 if six else 95, marker="D" if six else "o",
-                   color=C_STATIC if six else "white",
-                   edgecolor=C_STATIC if six else C_BED, lw=1.8, zorder=3)
-        dx, dy, ha = off[a]
-        ax.annotate(f"{FM_SHORT[a]}\n({FM_INPUT.get(a, '3-axis')})",
-                    (m + dx, b + dy), ha=ha, fontsize=8, color="#222", zorder=4)
-    ax.set_xlim(0.60, 0.90); ax.set_ylim(0.30, 0.75)
-    ax.set_xlabel("macro-F1 (ten-class ward task)"); ax.set_ylabel("bed-exit F1")
-    ax.text(0.895, 0.735, "six-axis territory:\nunreached by any\n3-axis arm",
-            ha="right", va="top", fontsize=8, color=C_STATIC, style="italic")
-    ax.grid(alpha=0.25, zorder=0)
-    ax.set_title("Both metrics move together; only the six-axis input reaches "
-                 "the corner", fontsize=9.5)
-    fig.tight_layout()
-    fig.savefig(FIG / "figS1_representation_scatter.png", bbox_inches="tight")
-    plt.close(fig)
-    print("figS1 done")
 
 
 ARM_LABEL = {
     "hand6+xgb": "Hand-crafted 6-axis + XGBoost",
-    "hand3+xgb": "Hand-crafted 3-axis + XGBoost",
+    "hand3gyro+xgb": "Hand-crafted 3-axis gyroscope-only + XGBoost",
+    "hand3+xgb": "Hand-crafted 3-axis accelerometer-only + XGBoost",
     "unimts3+xgb": "UniMTS embedding + XGBoost",
     "unimts3+logreg": "UniMTS frozen linear probe",
     "unimts3+ft-full": "UniMTS full fine-tune",
 }
+# two different 3-axis arms now exist, so the input column must name the sensor
+ARM_INPUT = {
+    "hand6+xgb": "6-axis (accel + gyro)",
+    "hand3gyro+xgb": "3-axis (gyroscope)",
+    "hand3+xgb": "3-axis (accelerometer)",
+    "unimts3+xgb": "3-axis (accelerometer)",
+    "unimts3+logreg": "3-axis (accelerometer)",
+    "unimts3+ft-full": "3-axis (accelerometer)",
+}
 CLASS_LABEL = {c: c.replace("_", "-").title().replace("-To-", "-to-") for c in WARD_ORDER}
+
+
+REQUIRED_ARMS = ("hand6+xgb", "hand3+xgb", "unimts3+xgb", "unimts3+logreg")
+
+
+def _arms_complete(arms) -> bool:
+    """Refuse to rewrite the manuscript tables from a partial set of arms.
+
+    fm_compare_w128.json is not in the repository, so a bare rerun would silently
+    emit a table missing the six-axis and UniMTS arms and clobber the published
+    numbers. Better to skip and say so.
+    """
+    missing = [a for a in REQUIRED_ARMS if a not in arms]
+    if missing:
+        print(f"  SKIP table write - missing arms {missing} "
+              f"(rerun run_fm_compare.py to regenerate fm_compare_w128.json)")
+        return False
+    return True
 
 
 def table1_per_class():
     arms = _collect_arms()
-    if not arms:
+    if not arms or not _arms_complete(arms):
         print("skip table1"); return
     df = pd.DataFrame({ARM_LABEL.get(a, a): v["per_class"] for a, v in arms.items()})
     df = df.reindex(WARD_ORDER).round(3)
@@ -313,12 +253,12 @@ def table1_per_class():
 
 def table2_headline():
     arms = _collect_arms()
-    if not arms:
+    if not arms or not _arms_complete(arms):
         print("skip table2"); return
     rows = []
     for a, v in arms.items():
         rows.append({"Representation": ARM_LABEL.get(a, a),
-                     "Input": "6-axis" if "hand6" in a else "3-axis",
+                     "Input": ARM_INPUT.get(a, "3-axis"),
                      "Macro-F1": round(v["macro"], 3),
                      "Bed-exit F1": round(v["bed"], 3)})
     df = pd.DataFrame(rows).sort_values("Macro-F1", ascending=False)
@@ -340,8 +280,7 @@ def main():
     fig1_headline_decomposition()
     fig2_gyro_ablation()
     fig3_label_efficiency()
-    fig4_representation_dots()
-    figS1_representation_scatter()
+    fig4_representation_bars()
     table1_per_class()
     table2_headline()
     print(f"\nfigures -> {FIG}")
