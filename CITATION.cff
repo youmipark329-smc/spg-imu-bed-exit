@@ -32,9 +32,9 @@ keywords:
 preferred-citation:
   type: article
   title: >-
-    Sensor modality versus pretraining for recognising bed-exit–relevant
-    postural transitions: a gyroscope-focused feasibility study on public
-    wearable-IMU data
+    Sensor Modality Versus Pretraining for Recognising Bed-Exit–Relevant
+    Postural Transitions: A Gyroscope-Focused Feasibility Study on Public
+    Wearable-IMU Data
   authors:
     - family-names: Park
       given-names: Youmi
@@ -44,5 +44,8 @@ preferred-citation:
       given-names: Wonchul
   journal: "Sensors"
   year: 2026
-  status: in-press
-  # Accepted 23 September 2026. Volume, issue, article number, and DOI will be added on publication.
+  volume: 26
+  issue: 19
+  start: 6073
+  doi: "10.3390/s26196073"
+  url: "https://www.mdpi.com/1424-8220/26/19/6073"

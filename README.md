@@ -1,9 +1,9 @@
 # Ward-relevant IMU transition recognition — analysis code
 
-Code to reproduce *"Sensor modality versus pretraining for recognising
-bed-exit–relevant postural transitions: a gyroscope-focused feasibility study on
-public wearable-IMU data"*, Park Y., Bold B., Cha W., *Sensors* 2026
-(accepted 23 September 2026; DOI to be added on publication).
+Code to reproduce *"Sensor Modality Versus Pretraining for Recognising
+Bed-Exit–Relevant Postural Transitions: A Gyroscope-Focused Feasibility Study on
+Public Wearable-IMU Data"*, Park Y., Bold B., Cha W., *Sensors* 2026, 26(19),
+6073, https://doi.org/10.3390/s26196073.
 
 The study is a public-data feasibility benchmark. It defines a ward-relevant
 ten-class task (four basic activities and six directional postural transitions)
@@ -152,6 +152,7 @@ rank-biserial effect size, bootstrap CI, Holm correction) are in
 
 ## Citation
 
-Park, Y.; Bold, B.; Cha, W. Sensor modality versus pretraining for recognising
-bed-exit–relevant postural transitions: a gyroscope-focused feasibility study on
-public wearable-IMU data. *Sensors* **2026**, in press. See `CITATION.cff`.
+Park, Y.; Bold, B.; Cha, W. Sensor Modality Versus Pretraining for Recognising
+Bed-Exit–Relevant Postural Transitions: A Gyroscope-Focused Feasibility Study on
+Public Wearable-IMU Data. *Sensors* **2026**, *26*, 6073.
+https://doi.org/10.3390/s26196073. See `CITATION.cff`.
